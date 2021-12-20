@@ -24,15 +24,20 @@ int getEncoderClsid(const WCHAR* format, CLSID* pClsid) {
 	return -1;
 }
 
+/*
+*  Retreives an image from the clipboard and encodes it as PNG
+*  - [out] hgl: Memory object that contains the PNG
+*  Returns 0 on success, custom error code on failure.
+*/
 int getPngFromClipboard(HGLOBAL* hgl) {
 	int status = 0;
 	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
 	ULONG_PTR gdiplusToken;
 	CLSID encoderClsid;
 	HGLOBAL imgMem;
-	IStream* stream{};
+	IStream* stream = 0;
 	void* bmpBits;
-	LPBITMAPINFO bmpInfo{};
+	LPBITMAPINFO bmpInfo = 0;
 
 	if (Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL) != Gdiplus::Status::Ok) { status = 1; goto rip; }
 	if (getEncoderClsid(L"image/png", &encoderClsid)) { status = 2; goto rip; }

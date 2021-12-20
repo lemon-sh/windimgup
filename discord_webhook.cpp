@@ -38,11 +38,12 @@ bool writeInternetExact(HINTERNET req, const void* data, DWORD dataLength)
 *  -  [in] dataLength: Length of the buffer supplied as 'data'
 *  -  [in] filename: Name of the uploaded file
 *  - [out] url: URL of the uploaded file. Heap allocated: should be freed after use.
-*  -  [in] cbProgress: Function that will be called every time data is sent. 
+*  -  [in] cbProgress: Function that will be called every time data is sent.
+*  Returns 0 on success and GetLastError() value on failure.
 */
 DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, const char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full)) {
 	if (!url) return errUnknown;
-	HINTERNET wininet{}, conn{}, req{};
+	HINTERNET wininet = 0, conn = 0, req = 0;
 	INTERNET_BUFFERSA bufs{};
 	char queryText[16] = { 0 };
 	DWORD filenameLen, bytesWritten = 0, lastWrite = 0, queryTextSize = sizeof(queryText);

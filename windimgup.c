@@ -18,7 +18,7 @@ HBRUSH bgBrush;
 
 // controls
 enum ControlClass {
-	CT_TEXT, CT_CHECK
+	CT_TEXT, CT_CHECK, CT_UPCLIP, CT_WEBHOOK
 };
 
 // ------------------------------------------------------------------------- //
@@ -68,7 +68,15 @@ void initializeGdiObjects() {
 */
 void createControls(HWND hWnd) {
 	createLabel(hWnd, CT_TEXT, "WinDimgup", titleFont, 10, 10, 130, 40);
+	createEdit(hWnd, CT_);
 	createCheckbox(hWnd, CT_CHECK, 10, 130, 20, 20);
+}
+
+/*
+*  Callback for the upload from clipboard command
+*/
+void uploadFromClipboard() {
+
 }
 
 // ------------------------------------------------------------------------- //
@@ -97,7 +105,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		}
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
-			// TODO
+		case CT_UPCLIP:
+			uploadFromClipoard();
+			break;
 		}
 		break;
 	case WM_NCCREATE:
