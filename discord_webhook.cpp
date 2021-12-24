@@ -10,7 +10,7 @@ const char fdHeadEnd[] = "\"\r\nContent-Type: application/octet-stream\r\n\r\n";
 const char fdEnd[] = "\r\n------974767299852498929531610575--\r\n";
 
 extern "C" {
-	DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, const char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full));
+	DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full), BOOL filenameAlloc);
 }
 
 /*
@@ -41,7 +41,7 @@ bool writeInternetExact(HINTERNET req, const void* data, DWORD dataLength)
 *  -  [in] cbProgress: Function that will be called every time data is sent.
 *  Returns 0 on success and GetLastError() value on failure.
 */
-DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, const char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full)) {
+DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full), BOOL filenameAlloc) {
 	if (!url) return errUnknown;
 	HINTERNET wininet = 0, conn = 0, req = 0;
 	INTERNET_BUFFERSA bufs{};
@@ -105,6 +105,10 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, con
 	}
 	urlLength = urlEndPos - urlPos - 8;
 	*url = (char*)malloc(urlLength + 1);
+	if (!*url) {
+		SetLastError(errUnknown);
+		goto rip;
+	}
 	memcpy(*url, recvBuf.c_str() + urlPos + 8, urlLength);
 	(*url)[urlLength] = 0;
 	SetLastError(ERROR_SUCCESS);
@@ -113,5 +117,6 @@ rip:
 	if (req != 0) InternetCloseHandle(req);
 	if (conn != 0) InternetCloseHandle(conn);
 	if (wininet != 0) InternetCloseHandle(wininet);
+	if (filenameAlloc) free(filename);
 	return status;
 }
