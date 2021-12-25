@@ -54,8 +54,5 @@
     <ClInclude Include="settings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="common_errors.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

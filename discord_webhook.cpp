@@ -2,15 +2,13 @@
 #include <WinInet.h>
 #include <string>
 
-const DWORD errUnknown = 0x20000001;
-
 const char* acceptTypes[] = { "application/json", NULL };
 const char fdHeadBegin[] = "------974767299852498929531610575\r\nContent-Disposition: form-data; name=\"file\"; filename=\"";
 const char fdHeadEnd[] = "\"\r\nContent-Type: application/octet-stream\r\n\r\n";
 const char fdEnd[] = "\r\n------974767299852498929531610575--\r\n";
 
 extern "C" {
-	DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full), BOOL filenameAlloc);
+	DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full));
 }
 
 /*
@@ -41,8 +39,7 @@ bool writeInternetExact(HINTERNET req, const void* data, DWORD dataLength)
 *  -  [in] cbProgress: Function that will be called every time data is sent.
 *  Returns 0 on success and GetLastError() value on failure.
 */
-DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full), BOOL filenameAlloc) {
-	if (!url) return errUnknown;
+DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full)) {
 	HINTERNET wininet = 0, conn = 0, req = 0;
 	INTERNET_BUFFERSA bufs{};
 	char queryText[16] = { 0 };
@@ -69,7 +66,7 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, cha
 
 	// writing head
 	if (!writeInternetExact(req, fdHeadBegin, sizeof(fdHeadBegin) - 1)) goto rip;
-	if (!writeInternetExact(req, filename, filenameLen)) goto rip;
+	if (!writeInternetExact(req, filename ? filename : "wdpupload.png", filenameLen)) goto rip;
 	if (!writeInternetExact(req, fdHeadEnd, sizeof(fdHeadEnd) - 1)) goto rip;
 
 	// writing data
@@ -93,30 +90,30 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, cha
 	}
 	urlPos = recvBuf.find("\"url\": \"");
 	if (urlPos == std::string::npos) {
-		SetLastError(errUnknown);
+		SetLastError(ERROR_INVALID_DATA);
 		*url = _strdup(recvBuf.c_str());
 		goto rip;
 	}
 	urlEndPos = recvBuf.find('"', urlPos + 8);
 	if (urlEndPos == std::string::npos) {
-		SetLastError(errUnknown);
+		SetLastError(ERROR_INVALID_DATA);
 		*url = _strdup(recvBuf.c_str());
 		goto rip;
 	}
 	urlLength = urlEndPos - urlPos - 8;
 	*url = (char*)malloc(urlLength + 1);
 	if (!*url) {
-		SetLastError(errUnknown);
+		SetLastError(ERROR_NOT_ENOUGH_MEMORY);
 		goto rip;
 	}
 	memcpy(*url, recvBuf.c_str() + urlPos + 8, urlLength);
 	(*url)[urlLength] = 0;
-	SetLastError(ERROR_SUCCESS);
+	SetLastError(0);
 rip:
 	DWORD status = GetLastError();
 	if (req != 0) InternetCloseHandle(req);
 	if (conn != 0) InternetCloseHandle(conn);
 	if (wininet != 0) InternetCloseHandle(wininet);
-	if (filenameAlloc) free(filename);
+	if (filename) free(filename);
 	return status;
 }

@@ -1,5 +1,4 @@
 #include <windows.h>
-#include "common_errors.h"
 
 WCHAR configPath[512];
 const DWORD configPathSize = sizeof(configPath) / sizeof(WCHAR);
@@ -31,13 +30,13 @@ DWORD storeSettings(BYTE opts, const char* webhook) {
 	size_t webhookLength = strlen(webhook);
 	DWORD bufSize = (DWORD)webhookLength + 2;
 	char* buf = (char*)malloc(bufSize);
-	if (buf == NULL) return errUnknown;
+	if (buf == NULL) return ERROR_NOT_ENOUGH_MEMORY;
 	*buf = opts;
 	memcpy(buf + 1, webhook, webhookLength + 1);
 	HANDLE configFile = CreateFileW(configPath, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (configFile == INVALID_HANDLE_VALUE) goto rip;
 	if (!WriteFile(configFile, buf, bufSize, &bytesWritten, NULL)) goto rip;
-	if (bytesWritten != bufSize) { SetLastError(errUnknown); goto rip; }
+	if (bytesWritten != bufSize) { SetLastError(ERROR_WRITE_FAULT); goto rip; }
 	SetLastError(0);
 rip:
 	status = GetLastError();
@@ -60,8 +59,9 @@ DWORD loadSettings(char** buf) {
 	if (file == INVALID_HANDLE_VALUE) goto rip;
 	if (!GetFileSizeEx(file, &filesize)) goto rip;
 	*buf = (char*)malloc(filesize.QuadPart);
+	if (!buf) { SetLastError(ERROR_NOT_ENOUGH_MEMORY); goto rip; }
 	if (!ReadFile(file, *buf, (DWORD)filesize.QuadPart, &bytesRead, NULL)) goto rip;
-	if (bytesRead != filesize.QuadPart) { SetLastError(errUnknown); goto rip; }
+	if (bytesRead != filesize.QuadPart) { SetLastError(ERROR_READ_FAULT); goto rip; }
 	(*buf)[filesize.QuadPart - 1] = 0;
 	SetLastError(0);
 rip:

@@ -7,7 +7,6 @@
 #include "settings.h"
 #include "discord_webhook.h"
 #include "clipboard.h"
-#include "common_errors.h"
 
 #define METASTRING(x) x,(sizeof(x)-1)
 
@@ -143,29 +142,29 @@ DWORD uploadHelper(uploadParam *param) {
 	SIZE_T dataSize = GlobalSize(param->data);
 	DWORD errCode = 0;
 
-	if (dataSize == 0) goto brazil;
-	if (dataLocked == NULL) goto brazil;
+	if (dataSize == 0) goto rip;
+	if (dataLocked == NULL) goto rip;
 	EnableWindow(fileButton, FALSE);
 	EnableWindow(clipButton, FALSE);
 	if (!GetWindowTextA(webhookEdit, webhook, sizeof(webhook))) {
 		MessageBoxA(NULL, "Empty webhook", "Error", MB_ICONERROR);
-		goto brazil;
+		goto rip;
 	}
 	if (!strncmp(webhook, METASTRING("https://discord.com"))) {
 		webhook_start += sizeof("https://discord.com") - 1;
 	}
 
 	switch ((errCode = uploadWebhook(webhook_start, dataLocked, (DWORD)dataSize, param->filename, &url, updateProgress, param->filenameAlloc))) {
-	case errUnknown:
+	case ERROR_INVALID_DATA:
 		MessageBoxA(NULL, url, "Error", MB_ICONERROR);
-		goto brazil;
+		goto rip;
 	case 0:
 		SetWindowTextA(outputEdit, url);
 		break;
 	default:
 		errorMsgbox(errCode);
 	}
-brazil:
+rip:
 	GlobalUnlock(param->data);
 	GlobalFree(param->data);
 	free(param);
@@ -227,20 +226,21 @@ void uploadFromFile() {
 		CloseHandle(uploadThread);
 		uploadThread = NULL;
 	}
-
+	
+	// TODO: this is a pile of random code that should be made functional ASAP
 	if (FAILED(CoInitializeEx(NULL, 0))) errorMsgbox(GetLastError());
-	char filename[MAX_PATH] = {0};
+	char filepath[512] = {0};
 	OPENFILENAMEA ofn;
 	ZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
 	ofn.nMaxFile = MAX_PATH;
-	ofn.lpstrFile = filename;
-	ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER;
+	ofn.lpstrFile = filepath;
+	ofn.Flags = OFN_FILEMUSTEXIST | OFN_EXPLORER;
 
 	if (!GetOpenFileNameA(&ofn)) errorMsgbox(CommDlgExtendedError());
 	CoUninitialize();
 
-	HANDLE file = CreateFileA("a.txt", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	HANDLE file = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE) {
 		MessageBoxA(NULL, "Failed to open the file", "Error", MB_ICONERROR);
 		return;
@@ -263,7 +263,7 @@ void uploadFromFile() {
 		goto rip;
 	}
 	param = malloc(sizeof(uploadParam));
-	if (param == NULL) goto rip;
+	if (!param) goto rip;
 	param->data = buf;
 	param->filename = _strdup("a.txt");
 	param->filenameAlloc = TRUE;

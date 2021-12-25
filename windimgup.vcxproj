@@ -154,7 +154,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="clipboard.h" />
-    <ClInclude Include="common_errors.h" />
     <ClInclude Include="discord_webhook.h" />
     <ClInclude Include="settings.h" />
     <ClInclude Include="resource.h" />
