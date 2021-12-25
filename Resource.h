@@ -7,7 +7,6 @@
 #define IDS_APP_TITLE                   103
 #define IDM_ABOUT                       104
 #define IDI_WINDIMGUP                   107
-#define IDI_SMALL                       108
 #define IDR_MAINFRAME                   128
 #define IDC_STATIC                      -1
 

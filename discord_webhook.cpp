@@ -58,7 +58,7 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, cha
 	if (!HttpAddRequestHeadersA(req, "Content-Type: multipart/form-data; boundary=----974767299852498929531610575", 75, HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDREQ_FLAG_ADD)) goto rip;
 
 	bufs.dwStructSize = sizeof(INTERNET_BUFFERS);
-	filenameLen = (DWORD)strlen(filename);
+	filenameLen = *filename ? (DWORD)strlen(filename) : 0;
 
 	bufs.dwBufferTotal = (sizeof(fdHeadBegin) + sizeof(fdHeadEnd) + sizeof(fdEnd) - 3) + filenameLen + dataLength;
 
@@ -66,7 +66,7 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, cha
 
 	// writing head
 	if (!writeInternetExact(req, fdHeadBegin, sizeof(fdHeadBegin) - 1)) goto rip;
-	if (!writeInternetExact(req, filename ? filename : "wdpupload.png", filenameLen)) goto rip;
+	if (!writeInternetExact(req, *filename ? filename : "wdpupload.png", filenameLen)) goto rip;
 	if (!writeInternetExact(req, fdHeadEnd, sizeof(fdHeadEnd) - 1)) goto rip;
 
 	// writing data
@@ -114,6 +114,5 @@ rip:
 	if (req != 0) InternetCloseHandle(req);
 	if (conn != 0) InternetCloseHandle(conn);
 	if (wininet != 0) InternetCloseHandle(wininet);
-	if (filename) free(filename);
 	return status;
 }

@@ -149,7 +149,6 @@
     <ResourceCompile Include="windimgup.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="small.ico" />
     <Image Include="windimgup.ico" />
   </ItemGroup>
   <ItemGroup>

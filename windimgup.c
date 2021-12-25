@@ -4,6 +4,7 @@
 #include <Commctrl.h>
 #include <stdio.h>
 
+#include "resource.h"
 #include "settings.h"
 #include "discord_webhook.h"
 #include "clipboard.h"
@@ -15,19 +16,20 @@
 // handles
 HINSTANCE hInst;
 HFONT uiFont, titleFont;
-HBRUSH bgBrush;
+HBRUSH bgBrush, brightBrush;
 HANDLE uploadThread;
 
 // window size
 #define WIN_WIDTH 300
-#define WIN_HEIGHT 220
+#define WIN_HEIGHT 225
 
 // colors
-#define DCOLOR_BG RGB( 40, 40, 40)
+#define DCOLOR_BG_DARK   RGB(40,40,40)
+#define DCOLOR_BG_BRIGHT RGB(60,60,60)
 
 // controls
 enum ControlClass {
-	CT_TEXT, CT_CHECK, CT_UPCLIP, CT_WEBHOOK, CT_UPFILE, CT_PROGRESS, CT_COPY
+	CT_TEXT, CT_EDIT, CT_CHECK, CT_UPCLIP, CT_WEBHOOK, CT_UPFILE, CT_PROGRESS, CT_COPY, CT_CAPTION
 };
 HWND webhookEdit, webhookButton, outputEdit, progressLabel, autocopyCheckbox, progressBar, fileButton, clipButton;
 BOOL isInSettings;
@@ -77,7 +79,8 @@ HWND createProgress(HWND parent, UINT_PTR controlId, int max, int posX, int posY
 void initializeGdiObjects() {
 	uiFont = CreateFontA(16, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, FF_DONTCARE, "Segoe UI");
 	titleFont = CreateFontA(32, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, FF_DONTCARE, "Segoe UI");
-	bgBrush = CreateSolidBrush(DCOLOR_BG);
+	bgBrush = CreateSolidBrush(DCOLOR_BG_DARK);
+	brightBrush = CreateSolidBrush(DCOLOR_BG_BRIGHT);
 }
 
 /*
@@ -85,19 +88,21 @@ void initializeGdiObjects() {
 */
 void createControls(HWND hWnd) {
 	createLabel(hWnd, CT_TEXT, "WinDimgup", titleFont, 10, 8, 130, 40);
-	createLabel(hWnd, CT_TEXT, "Upload:", uiFont, 12, 50, 50, 22);
-	fileButton = createButton(hWnd, CT_UPFILE, "File", 60, 47, 60, 22);
-	clipButton = createButton(hWnd, CT_UPCLIP, "Image from clipboard", 120, 47, 150, 22);
-	progressLabel = createLabel(hWnd, CT_TEXT, "", uiFont, 12, 70, 50, 22);
-	progressBar = createProgress(hWnd, CT_PROGRESS, 100, 61, 70, 208, 18);
-	outputEdit = createEdit(hWnd, CT_TEXT, 12, 95, 200, 22, ES_READONLY | ES_AUTOHSCROLL);
-	createButton(hWnd, CT_COPY, "Copy", 215, 95, 55, 22);
+	createLabel(hWnd, CT_CAPTION, "by ./lemon.sh", uiFont, 145, 25, 100, 40);
 
-	webhookEdit = createEdit(hWnd, CT_TEXT, 12, 125, 200, 22, ES_AUTOHSCROLL);
+	createLabel(hWnd, CT_TEXT, "Upload:", uiFont, 12, 55, 50, 22);
+	fileButton = createButton(hWnd, CT_UPFILE, "File", 60, 52, 60, 22);
+	clipButton = createButton(hWnd, CT_UPCLIP, "Image from clipboard", 120, 52, 150, 22);
+	progressLabel = createLabel(hWnd, CT_TEXT, "", uiFont, 12, 75, 50, 22);
+	progressBar = createProgress(hWnd, CT_PROGRESS, 100, 61, 75, 208, 18);
+	outputEdit = createEdit(hWnd, CT_EDIT, 12, 100, 200, 22, ES_READONLY | ES_AUTOHSCROLL);
+	createButton(hWnd, CT_COPY, "Copy", 215, 100, 55, 22);
+
+	webhookEdit = createEdit(hWnd, CT_EDIT, 12, 135, 200, 22, ES_AUTOHSCROLL);
 	EnableWindow(webhookEdit, 0);
-	webhookButton = createButton(hWnd, CT_WEBHOOK, "Edit", 215, 125, 55, 22);
-	autocopyCheckbox = createCheckbox(hWnd, CT_CHECK, 12, 150, 15, 20);
-	createLabel(hWnd, CT_TEXT, "Automatically copy link to clipboard", uiFont, 30, 152, 200, 20);
+	webhookButton = createButton(hWnd, CT_WEBHOOK, "Edit", 215, 135, 55, 22);
+	autocopyCheckbox = createCheckbox(hWnd, CT_CHECK, 12, 160, 15, 20);
+	createLabel(hWnd, CT_TEXT, "Automatically copy link to clipboard", uiFont, 30, 162, 200, 20);
 	EnableWindow(autocopyCheckbox, 0);
 
 	SendMessageA(webhookEdit, EM_SETCUEBANNER, 1, (LPARAM)L"Webhook...");
@@ -129,8 +134,7 @@ void errorMsgbox(DWORD errorCode)
 
 typedef struct {
 	HGLOBAL data;
-	char* filename;
-	BOOL filenameAlloc;
+	char filename[256];
 } uploadParam;
 
 /*
@@ -154,10 +158,10 @@ DWORD uploadHelper(uploadParam *param) {
 		webhook_start += sizeof("https://discord.com") - 1;
 	}
 
-	switch ((errCode = uploadWebhook(webhook_start, dataLocked, (DWORD)dataSize, param->filename, &url, updateProgress, param->filenameAlloc))) {
+	switch ((errCode = uploadWebhook(webhook_start, dataLocked, (DWORD)dataSize, param->filename, &url, updateProgress))) {
 	case ERROR_INVALID_DATA:
 		MessageBoxA(NULL, url, "Error", MB_ICONERROR);
-		goto rip;
+		break;
 	case 0:
 		SetWindowTextA(outputEdit, url);
 		break;
@@ -189,8 +193,7 @@ void uploadFromClipboard() {
 
 	uploadParam *param = malloc(sizeof(uploadParam));
 	if (param == NULL) return;
-	param->filename = "wdmupload.png";
-	param->filenameAlloc = FALSE;
+	*param->filename = 0;
 	switch (getPngFromClipboard(&param->data)) {
 	case 1:
 		MessageBoxA(NULL, "Failed to initialize GDI+", "Error", MB_ICONERROR); return;
@@ -216,8 +219,10 @@ void uploadFromClipboard() {
 *  Callback for the upload from file command
 */
 void uploadFromFile() {
+	if (FAILED(CoInitializeEx(NULL, COINIT_SPEED_OVER_MEMORY))) return;
 	uploadParam* param = 0;
 	HGLOBAL buf = 0;
+	HANDLE file = 0;
 	if (uploadThread != NULL) {
 		if (WaitForSingleObject(uploadThread, INFINITE)) {
 			MessageBoxA(NULL, "Failed to join the thread", "Error", MB_ICONERROR);
@@ -227,20 +232,25 @@ void uploadFromFile() {
 		uploadThread = NULL;
 	}
 	
-	// TODO: this is a pile of random code that should be made functional ASAP
-	if (FAILED(CoInitializeEx(NULL, 0))) errorMsgbox(GetLastError());
-	char filepath[512] = {0};
+	char filepath[512];
+	param = malloc(sizeof(uploadParam));
+	if (!param) goto rip;
+	*filepath = 0;
+	*param->filename = 0;
+
 	OPENFILENAMEA ofn;
 	ZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
-	ofn.nMaxFile = MAX_PATH;
 	ofn.lpstrFile = filepath;
+	ofn.nMaxFile = sizeof(filepath);
+	ofn.lpstrFileTitle = param->filename;
+	ofn.nMaxFileTitle = sizeof(param->filename);
 	ofn.Flags = OFN_FILEMUSTEXIST | OFN_EXPLORER;
 
 	if (!GetOpenFileNameA(&ofn)) errorMsgbox(CommDlgExtendedError());
 	CoUninitialize();
 
-	HANDLE file = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	file = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE) {
 		MessageBoxA(NULL, "Failed to open the file", "Error", MB_ICONERROR);
 		return;
@@ -262,11 +272,7 @@ void uploadFromFile() {
 		MessageBoxA(NULL, "Could not read the entire file", "Error", MB_ICONERROR);
 		goto rip;
 	}
-	param = malloc(sizeof(uploadParam));
-	if (!param) goto rip;
 	param->data = buf;
-	param->filename = _strdup("a.txt");
-	param->filenameAlloc = TRUE;
 
 	uploadThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)uploadHelper, param, 0, NULL);
 	if (uploadThread == NULL) {
@@ -318,7 +324,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		return (LRESULT)bgBrush;
 	case WM_CTLCOLOREDIT:
 	case WM_CTLCOLORSTATIC:
-		return wndColorHelper(wParam, DCOLOR_BG, RGB(240, 240, 240), bgBrush);
+		switch (GetDlgCtrlID((HWND)lParam)) {
+		case CT_EDIT:
+			return wndColorHelper(wParam, DCOLOR_BG_BRIGHT, RGB(240, 240, 240), brightBrush);
+		case CT_CAPTION:
+			return wndColorHelper(wParam, DCOLOR_BG_DARK, RGB(150, 150, 150), bgBrush);
+		default:
+			return wndColorHelper(wParam, DCOLOR_BG_DARK, RGB(240, 240, 240), bgBrush);
+		}
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
 		case CT_UPCLIP:
@@ -370,12 +383,14 @@ int WINAPI WinMain(
 	initializeGdiObjects();
 	hInst = hInstance;
 	MSG msg;
-	WNDCLASSA wc = { 0 };
+	WNDCLASSEXA wc = { 0 };
+	wc.cbSize = sizeof(wc);
 	wc.lpfnWndProc = WndProc;
+	wc.hIcon = LoadIconA(hInstance, MAKEINTRESOURCEA(IDI_WINDIMGUP));
 	wc.hInstance = hInstance;
 	wc.hbrBackground = bgBrush;
 	wc.lpszClassName = "WinDimgup";
-	if (!RegisterClassA(&wc)) return 1;
+	if (!RegisterClassExA(&wc)) return 1;
 
 	INITCOMMONCONTROLSEX icc;
 	icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
