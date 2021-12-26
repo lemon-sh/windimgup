@@ -8,7 +8,7 @@ const char fdHeadEnd[] = "\"\r\nContent-Type: application/octet-stream\r\n\r\n";
 const char fdEnd[] = "\r\n------974767299852498929531610575--\r\n";
 
 extern "C" {
-	DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full));
+	DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, const char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full));
 }
 
 /*
@@ -39,11 +39,11 @@ bool writeInternetExact(HINTERNET req, const void* data, DWORD dataLength)
 *  -  [in] cbProgress: Function that will be called every time data is sent.
 *  Returns 0 on success and GetLastError() value on failure.
 */
-DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full)) {
+DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, const char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full)) {
+	if (!*filename) filename = "wdmupload.png";
 	HINTERNET wininet = 0, conn = 0, req = 0;
 	INTERNET_BUFFERSA bufs{};
-	char queryText[16] = { 0 };
-	DWORD filenameLen, bytesWritten = 0, lastWrite = 0, queryTextSize = sizeof(queryText);
+	DWORD filenameLen, bytesWritten = 0, lastWrite = 0;
 	size_t urlPos, urlEndPos, urlLength;
 
 	std::string recvBuf;
@@ -58,7 +58,7 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, cha
 	if (!HttpAddRequestHeadersA(req, "Content-Type: multipart/form-data; boundary=----974767299852498929531610575", 75, HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDREQ_FLAG_ADD)) goto rip;
 
 	bufs.dwStructSize = sizeof(INTERNET_BUFFERS);
-	filenameLen = *filename ? (DWORD)strlen(filename) : 0;
+	filenameLen = (DWORD)strlen(filename);
 
 	bufs.dwBufferTotal = (sizeof(fdHeadBegin) + sizeof(fdHeadEnd) + sizeof(fdEnd) - 3) + filenameLen + dataLength;
 
@@ -66,7 +66,7 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, cha
 
 	// writing head
 	if (!writeInternetExact(req, fdHeadBegin, sizeof(fdHeadBegin) - 1)) goto rip;
-	if (!writeInternetExact(req, *filename ? filename : "wdpupload.png", filenameLen)) goto rip;
+	if (!writeInternetExact(req, filename, filenameLen)) goto rip;
 	if (!writeInternetExact(req, fdHeadEnd, sizeof(fdHeadEnd) - 1)) goto rip;
 
 	// writing data

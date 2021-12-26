@@ -109,6 +109,45 @@ void createControls(HWND hWnd) {
 }
 
 /*
+*  Display error box from an error code
+*/
+void errorMsgbox(DWORD errorCode)
+{
+	LPSTR lpMsgBuf;
+	FormatMessageA(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+		GetModuleHandleA("wininet.dll"), errorCode, 0, (LPSTR)&lpMsgBuf, 0, NULL);
+	MessageBoxA(NULL, lpMsgBuf, "Error", MB_ICONERROR);
+	LocalFree(lpMsgBuf);
+}
+
+/*
+*  Copy contents of the outputEdit control to clipboard
+*/
+void copyLinkToClipboard(HWND hwnd) {
+	if (!OpenClipboard(hwnd)) return;
+	SetLastError(0);
+	int urlLen = GetWindowTextLengthA(outputEdit)+1;
+	HGLOBAL urlMem = 0;
+	DWORD status;
+	HANDLE clipHandle;
+	if (urlLen == 0) {
+		MessageBoxA(NULL, "There's nothing to copy.", "Error", MB_ICONINFORMATION);
+		goto rip;
+	}
+	if (!(urlMem = GlobalAlloc(GMEM_FIXED, urlLen))) goto rip;
+	if (!GetWindowTextA(outputEdit, urlMem, urlLen)) goto rip;
+	if (!EmptyClipboard()) goto rip;
+	if (!(clipHandle = SetClipboardData(CF_TEXT, urlMem))) goto rip;
+	urlMem = 0;
+rip:
+	status = GetLastError();
+	if (status) errorMsgbox(status);
+	CloseClipboard();
+	if (urlMem) GlobalFree(urlMem);
+}
+
+/*
 *  Callback for the uploadWebhook function
 */
 void updateProgress(DWORD a, DWORD b) {
@@ -119,21 +158,9 @@ void updateProgress(DWORD a, DWORD b) {
 	SetWindowTextA(progressLabel, progressText);
 }
 
-/*
-*  Display error box from an error code
-*/
-void errorMsgbox(DWORD errorCode)
-{
-	LPSTR lpMsgBuf;
-	FormatMessageA(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
-		GetModuleHandleA("wininet.dll"), errorCode, 0, (LPSTR) & lpMsgBuf, 0, NULL);
-	MessageBoxA(NULL, lpMsgBuf, "Error", MB_ICONERROR);
-	LocalFree(lpMsgBuf);
-}
-
 typedef struct {
 	HGLOBAL data;
+	HWND parent;
 	char filename[256];
 } uploadParam;
 
@@ -164,6 +191,9 @@ DWORD uploadHelper(uploadParam *param) {
 		break;
 	case 0:
 		SetWindowTextA(outputEdit, url);
+		if (SendMessageA(autocopyCheckbox, BM_GETCHECK, 0, 0)) {
+			copyLinkToClipboard(param->parent);
+		}
 		break;
 	default:
 		errorMsgbox(errCode);
@@ -181,7 +211,7 @@ rip:
 /*
 *  Callback for the upload from clipboard command
 */
-void uploadFromClipboard() {
+void uploadFromClipboard(HWND parent) {
 	if (uploadThread != NULL) {
 		if (WaitForSingleObject(uploadThread, INFINITE)) {
 			MessageBoxA(NULL, "Failed to join the thread", "Error", MB_ICONERROR);
@@ -194,31 +224,35 @@ void uploadFromClipboard() {
 	uploadParam *param = malloc(sizeof(uploadParam));
 	if (param == NULL) return;
 	*param->filename = 0;
+	param->parent = parent;
 	switch (getPngFromClipboard(&param->data)) {
 	case 1:
-		MessageBoxA(NULL, "Failed to initialize GDI+", "Error", MB_ICONERROR); return;
+		MessageBoxA(NULL, "Failed to initialize GDI+", "Error", MB_ICONERROR); goto rip;
 	case 2:
-		MessageBoxA(NULL, "Failed to initialize the PNG encoder", "Error", MB_ICONERROR); return;
+		MessageBoxA(NULL, "Failed to initialize the PNG encoder", "Error", MB_ICONERROR); goto rip;
 	case 3:
-		MessageBoxA(NULL, "Failed to open clipboard", "Error", MB_ICONERROR); return;
+		MessageBoxA(NULL, "Failed to open clipboard", "Error", MB_ICONERROR); goto rip;
 	case 4:
-		MessageBoxA(NULL, "No image in clipboard", "Error", MB_ICONWARNING); return;
+		MessageBoxA(NULL, "No image in clipboard", "Error", MB_ICONWARNING); goto rip;
 	case 5: case 6:
-		MessageBoxA(NULL, "Failed to allocate the in-memory stream", "Error", MB_ICONERROR); return;
+		MessageBoxA(NULL, "Failed to allocate the in-memory stream", "Error", MB_ICONERROR); goto rip;
 	}
 
 	uploadThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) uploadHelper, param, 0, NULL);
 	if (uploadThread == NULL) {
 		MessageBoxA(NULL, "Failed to create the thread", "Error", MB_ICONERROR);
-		GlobalFree(param->data);
-		free(param);
+		goto rip;
 	}
+	return;
+rip:
+	GlobalFree(param->data);
+	free(param);
 }
 
 /*
 *  Callback for the upload from file command
 */
-void uploadFromFile() {
+void uploadFromFile(HWND parent) {
 	if (FAILED(CoInitializeEx(NULL, COINIT_SPEED_OVER_MEMORY))) return;
 	uploadParam* param = 0;
 	HGLOBAL buf = 0;
@@ -237,6 +271,7 @@ void uploadFromFile() {
 	if (!param) goto rip;
 	*filepath = 0;
 	*param->filename = 0;
+	param->parent = parent;
 
 	OPENFILENAMEA ofn;
 	ZeroMemory(&ofn, sizeof(ofn));
@@ -247,13 +282,17 @@ void uploadFromFile() {
 	ofn.nMaxFileTitle = sizeof(param->filename);
 	ofn.Flags = OFN_FILEMUSTEXIST | OFN_EXPLORER;
 
-	if (!GetOpenFileNameA(&ofn)) errorMsgbox(CommDlgExtendedError());
+	if (!GetOpenFileNameA(&ofn)) {
+		DWORD error = CommDlgExtendedError();
+		if (error) errorMsgbox(error);
+		goto rip;
+	}
 	CoUninitialize();
 
 	file = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE) {
 		MessageBoxA(NULL, "Failed to open the file", "Error", MB_ICONERROR);
-		return;
+		goto rip;
 	}
 	LARGE_INTEGER filesize;
 	DWORD bytesRead;
@@ -315,7 +354,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 			break;
 		}
 		else {
-			SendMessageA(autocopyCheckbox, BM_SETCHECK, *buf ? BST_CHECKED : BST_UNCHECKED, 0);
+			SendMessageA(autocopyCheckbox, BM_SETCHECK, (*buf) ? BST_CHECKED : BST_UNCHECKED, 0);
 			SetWindowTextA(webhookEdit, buf + 1);
 		}
 		break;
@@ -335,10 +374,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
 		case CT_UPCLIP:
-			uploadFromClipboard();
+			uploadFromClipboard(hWnd);
 			break;
 		case CT_UPFILE:
-			uploadFromFile();
+			uploadFromFile(hWnd);
+			break;
+		case CT_COPY:
+			copyLinkToClipboard(hWnd);
 			break;
 		case CT_WEBHOOK:
 			if (isInSettings) {
