@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.0.0",
   "url": "https://git.karx.xyz/attachments/80fa752b-88c6-4bfe-b023-d9bb4f38e459#/windimgup.exe",
   "bin": "windimgup.exe",
   "hash": "e38a7db1f2d0351bbcfe63173c7e4386d972579d859017bed58e20566c30c9db",
@@ -8,8 +8,5 @@
       "windimgup.exe",
       "windimgup"
     ]
-  ],
-  "depends": [
-    "extras/vcredist2022"
   ]
 }

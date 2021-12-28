@@ -225,6 +225,7 @@ void uploadFromClipboard(HWND parent) {
 	if (param == NULL) return;
 	*param->filename = 0;
 	param->parent = parent;
+	param->data = 0;
 	switch (getPngFromClipboard(&param->data)) {
 	case 1:
 		MessageBoxA(NULL, "Failed to initialize GDI+", "Error", MB_ICONERROR); goto rip;
@@ -245,7 +246,7 @@ void uploadFromClipboard(HWND parent) {
 	}
 	return;
 rip:
-	GlobalFree(param->data);
+	if (param->data) GlobalFree(param->data);
 	free(param);
 }
 
