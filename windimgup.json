@@ -1,8 +1,8 @@
 {
-  "version": "1.0.0",
-  "url": "https://git.karx.xyz/attachments/80fa752b-88c6-4bfe-b023-d9bb4f38e459#/windimgup.exe",
+  "version": "1.0.1",
+  "url": "https://git.karx.xyz/attachments/7e1f49da-cb9c-4886-9c11-3c7c46a0ad1a#/windimgup.exe",
   "bin": "windimgup.exe",
-  "hash": "e38a7db1f2d0351bbcfe63173c7e4386d972579d859017bed58e20566c30c9db",
+  "hash": "60B1C6915D6201B12BE81CEFEBB865B1C0B5A87649EE69ACBFC2648F3D6501C5",
   "shortcuts": [
     [
       "windimgup.exe",
