@@ -4,8 +4,10 @@
   "bin": "windimgup.exe",
   "hash": "e38a7db1f2d0351bbcfe63173c7e4386d972579d859017bed58e20566c30c9db",
   "shortcuts": [
-    "windimgup.exe",
-    "windimgup"
+    [
+      "windimgup.exe",
+      "windimgup"
+    ]
   ],
   "depends": [
     "extras/vcredist2022"
