@@ -52,4 +52,7 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="windimgup.json" />
+  </ItemGroup>
 </Project>

@@ -160,7 +160,15 @@
     <ClInclude Include="settings.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="windimgup.json" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties windimgup_1json__JsonSchema="https://raw.githubusercontent.com/ScoopInstaller/Scoop/master/schema.json" />
+    </VisualStudio>
+  </ProjectExtensions>
 </Project>
