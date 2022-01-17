@@ -26,7 +26,7 @@ int initSettings() {
 *  Returns 0 on success and GetLastError() value on failure.
 */
 DWORD storeSettings(BYTE opts, const char* webhook) {
-	DWORD bytesWritten = 0, status = 0;
+	DWORD bytesWritten = 0, status;
 	size_t webhookLength = strlen(webhook);
 	DWORD bufSize = (DWORD)webhookLength + 2;
 	char* buf = (char*)malloc(bufSize);
@@ -59,8 +59,7 @@ DWORD loadSettings(char** buf) {
 	if (file == INVALID_HANDLE_VALUE) goto rip;
 	if (!GetFileSizeEx(file, &filesize)) goto rip;
 	*buf = (char*)malloc(filesize.QuadPart);
-	if (!buf) { SetLastError(ERROR_NOT_ENOUGH_MEMORY); goto rip; }
-	if (!ReadFile(file, *buf, (DWORD)filesize.QuadPart, &bytesRead, NULL)) goto rip;
+    if (!ReadFile(file, *buf, (DWORD)filesize.QuadPart, &bytesRead, NULL)) goto rip;
 	if (bytesRead != filesize.QuadPart) { SetLastError(ERROR_READ_FAULT); goto rip; }
 	(*buf)[filesize.QuadPart - 1] = 0;
 	SetLastError(0);

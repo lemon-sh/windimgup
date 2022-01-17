@@ -1,10 +1,7 @@
-#pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
-
 #include <windows.h>
 #include <Commctrl.h>
 #include <stdio.h>
 
-#include "resource.h"
 #include "settings.h"
 #include "discord_webhook.h"
 #include "clipboard.h"
@@ -20,8 +17,8 @@ HBRUSH bgBrush, brightBrush;
 HANDLE uploadThread;
 
 // window size
-#define WIN_WIDTH 300
-#define WIN_HEIGHT 225
+#define WIN_WIDTH 290
+#define WIN_HEIGHT 215
 
 // colors
 #define DCOLOR_BG_DARK   RGB(40,40,40)
@@ -66,9 +63,9 @@ HWND createCheckbox(HWND parent, UINT_PTR controlId, int posX, int posY, int wid
 }
 
 HWND createProgress(HWND parent, UINT_PTR controlId, int max, int posX, int posY, int width, int height) {
-	HWND progressBar = CreateWindowEx(0, PROGRESS_CLASS, NULL, WS_CHILD | WS_VISIBLE | PBS_SMOOTH, posX, posY, width, height, parent, (HMENU)controlId, hInst, NULL);
-	SendMessageA(progressBar, PBM_SETRANGE, 0, (LPARAM)MAKELONG(0, max));
-	return progressBar;
+	HWND progressBarHwnd = CreateWindowEx(0, PROGRESS_CLASS, NULL, WS_CHILD | WS_VISIBLE | PBS_SMOOTH, posX, posY, width, height, parent, (HMENU)controlId, hInst, NULL);
+	SendMessageA(progressBarHwnd, PBM_SETRANGE, 0, (LPARAM)MAKELONG(0, max));
+	return progressBarHwnd;
 }
 
 // ------------------------------------------------------------------------- //
@@ -130,15 +127,14 @@ void copyLinkToClipboard(HWND hwnd) {
 	int urlLen = GetWindowTextLengthA(outputEdit)+1;
 	HGLOBAL urlMem = 0;
 	DWORD status;
-	HANDLE clipHandle;
-	if (urlLen == 0) {
+    if (urlLen == 0) {
 		MessageBoxA(NULL, "There's nothing to copy.", "Error", MB_ICONINFORMATION);
 		goto rip;
 	}
 	if (!(urlMem = GlobalAlloc(GMEM_FIXED, urlLen))) goto rip;
 	if (!GetWindowTextA(outputEdit, urlMem, urlLen)) goto rip;
 	if (!EmptyClipboard()) goto rip;
-	if (!(clipHandle = SetClipboardData(CF_TEXT, urlMem))) goto rip;
+	if (!(SetClipboardData(CF_TEXT, urlMem))) goto rip;
 	urlMem = 0;
 rip:
 	status = GetLastError();
@@ -171,7 +167,7 @@ DWORD uploadHelper(uploadParam *param) {
 	char webhook[256];
 	char *webhook_start = webhook, *dataLocked = GlobalLock(param->data), *url = 0;
 	SIZE_T dataSize = GlobalSize(param->data);
-	DWORD errCode = 0;
+	DWORD errCode;
 
 	if (dataSize == 0) goto rip;
 	if (dataLocked == NULL) goto rip;
@@ -198,6 +194,7 @@ DWORD uploadHelper(uploadParam *param) {
 	default:
 		errorMsgbox(errCode);
 	}
+    SendMessageA(progressBar, PBM_SETPOS, 0, 0);
 rip:
 	GlobalUnlock(param->data);
 	GlobalFree(param->data);
@@ -255,7 +252,7 @@ rip:
 */
 void uploadFromFile(HWND parent) {
 	if (FAILED(CoInitializeEx(NULL, COINIT_SPEED_OVER_MEMORY))) return;
-	uploadParam* param = 0;
+	uploadParam* param;
 	HGLOBAL buf = 0;
 	HANDLE file = 0;
 	if (uploadThread != NULL) {
@@ -412,7 +409,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		}
 		break;
 	case WM_NCCREATE:
-		return TRUE;		
+		return TRUE;
+    default: break; // SILENCE, CLANG-TIDY!
 	}
 	return DefWindowProcA(hWnd, message, wParam, lParam);
 }
@@ -429,7 +427,7 @@ int WINAPI WinMain(
 	WNDCLASSEXA wc = { 0 };
 	wc.cbSize = sizeof(wc);
 	wc.lpfnWndProc = WndProc;
-	wc.hIcon = LoadIconA(hInstance, MAKEINTRESOURCEA(IDI_WINDIMGUP));
+	wc.hIcon = LoadIconA(hInstance, MAKEINTRESOURCEA(2));
 	wc.hInstance = hInstance;
 	wc.hbrBackground = bgBrush;
 	wc.lpszClassName = "WinDimgup";

@@ -10,8 +10,8 @@ int getEncoderClsid(const WCHAR* format, CLSID* pClsid) {
 	UINT size = 0;
 	Gdiplus::GetImageEncodersSize(&num, &size);
 	if (size == 0) return -1;
-	Gdiplus::ImageCodecInfo* pImageCodecInfo = (Gdiplus::ImageCodecInfo*)(malloc(size));
-	if (pImageCodecInfo == NULL) return -1;
+	auto* pImageCodecInfo = (Gdiplus::ImageCodecInfo*)(malloc(size));
+	if (pImageCodecInfo == nullptr) return -1;
 	Gdiplus::GetImageEncoders(num, size, pImageCodecInfo);
 	for (UINT j = 0; j < num; ++j) {
 		if (wcscmp(pImageCodecInfo[j].MimeType, format) == 0) {
@@ -35,30 +35,30 @@ int getPngFromClipboard(HGLOBAL* hgl) {
 	ULONG_PTR gdiplusToken;
 	CLSID encoderClsid;
 	HGLOBAL imgMem;
-	IStream* stream = 0;
+	IStream* stream = nullptr;
 	void* bmpBits;
-	LPBITMAPINFO bmpInfo = 0;
+	LPBITMAPINFO bmpInfo = nullptr;
 
-	if (Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL) != Gdiplus::Status::Ok) { status = 1; goto rip; }
+	if (Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, nullptr) != Gdiplus::Status::Ok) { status = 1; goto rip; }
 	if (getEncoderClsid(L"image/png", &encoderClsid)) { status = 2; goto rip; }
 
-	if (!OpenClipboard(NULL)) { status = 3; goto rip; }
+	if (!OpenClipboard(nullptr)) { status = 3; goto rip; }
 	imgMem = GetClipboardData(CF_DIB);
-	if (imgMem == NULL) { status = 4; goto rip; }
+	if (imgMem == nullptr) { status = 4; goto rip; }
 	bmpInfo = (LPBITMAPINFO)GlobalLock(imgMem);
 	bmpBits = (void*)(bmpInfo + 1);
 
-	if (FAILED(CreateStreamOnHGlobal(NULL, FALSE, &stream))) { status = 5; goto rip; }
+	if (FAILED(CreateStreamOnHGlobal(nullptr, FALSE, &stream))) { status = 5; goto rip; }
 
 	{
 		Gdiplus::Bitmap bmp(bmpInfo, bmpBits);
-		bmp.Save(stream, &encoderClsid);
+		bmp.Save(stream, &encoderClsid, nullptr);
 	}
 
 	if (FAILED(GetHGlobalFromStream(stream, hgl))) { status = 6; }
 rip:
-	if (bmpInfo != NULL) GlobalUnlock(bmpInfo);
-	if (stream != NULL) stream->Release();
+	if (bmpInfo != nullptr) GlobalUnlock(bmpInfo);
+	if (stream != nullptr) stream->Release();
 	CloseClipboard();
 	Gdiplus::GdiplusShutdown(gdiplusToken);
 	return status;

@@ -2,7 +2,9 @@
 #include <WinInet.h>
 #include <string>
 
-const char* acceptTypes[] = { "application/json", NULL };
+#define lemin(a, b) ((a) < (b) ? (a) : (b))
+
+const char* acceptTypes[] = { "application/json", nullptr };
 const char fdHeadBegin[] = "------974767299852498929531610575\r\nContent-Disposition: form-data; name=\"file\"; filename=\"";
 const char fdHeadEnd[] = "\"\r\nContent-Type: application/octet-stream\r\n\r\n";
 const char fdEnd[] = "\r\n------974767299852498929531610575--\r\n";
@@ -41,7 +43,7 @@ bool writeInternetExact(HINTERNET req, const void* data, DWORD dataLength)
 */
 DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, const char* filename, char** url, void (*cbProgress)(DWORD sent, DWORD full)) {
 	if (!*filename) filename = "wdmupload.png";
-	HINTERNET wininet = 0, conn = 0, req = 0;
+	HINTERNET wininet, conn = nullptr, req = nullptr;
 	INTERNET_BUFFERSA bufs{};
 	DWORD filenameLen, bytesWritten = 0, lastWrite = 0;
 	size_t urlPos, urlEndPos, urlLength;
@@ -49,12 +51,12 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, con
 	std::string recvBuf;
 	recvBuf.reserve(1024);
 
-	wininet = InternetOpenA("WinDimgup/1.0", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, NULL);
-	if (wininet == 0) goto rip;
-	conn = InternetConnectA(wininet, "discord.com", INTERNET_DEFAULT_HTTPS_PORT, NULL, NULL, INTERNET_SERVICE_HTTP, NULL, 0);
-	if (conn == 0) goto rip;
-	req = HttpOpenRequestA(conn, "POST", webhook, "HTTP/1.1", NULL, acceptTypes, INTERNET_FLAG_SECURE, 0);
-	if (req == 0) goto rip;
+	wininet = InternetOpenA("WinDimgup/1.0", INTERNET_OPEN_TYPE_PRECONFIG, nullptr, nullptr, NULL);
+	if (wininet == nullptr) goto rip;
+	conn = InternetConnectA(wininet, "discord.com", INTERNET_DEFAULT_HTTPS_PORT, nullptr, nullptr, INTERNET_SERVICE_HTTP, NULL, 0);
+	if (conn == nullptr) goto rip;
+	req = HttpOpenRequestA(conn, "POST", webhook, "HTTP/1.1", nullptr, acceptTypes, INTERNET_FLAG_SECURE, 0);
+	if (req == nullptr) goto rip;
 	if (!HttpAddRequestHeadersA(req, "Content-Type: multipart/form-data; boundary=----974767299852498929531610575", 75, HTTP_ADDREQ_FLAG_REPLACE | HTTP_ADDREQ_FLAG_ADD)) goto rip;
 
 	bufs.dwStructSize = sizeof(INTERNET_BUFFERS);
@@ -62,7 +64,7 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, con
 
 	bufs.dwBufferTotal = (sizeof(fdHeadBegin) + sizeof(fdHeadEnd) + sizeof(fdEnd) - 3) + filenameLen + dataLength;
 
-	if (!HttpSendRequestExA(req, &bufs, NULL, 0, 0)) goto rip;
+	if (!HttpSendRequestExA(req, &bufs, nullptr, 0, 0)) goto rip;
 
 	// writing head
 	if (!writeInternetExact(req, fdHeadBegin, sizeof(fdHeadBegin) - 1)) goto rip;
@@ -71,14 +73,14 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, con
 
 	// writing data
 	while (bytesWritten < dataLength) {
-		if (!InternetWriteFile(req, data + bytesWritten, min(dataLength - bytesWritten, SHRT_MAX), &lastWrite)) goto rip;
+		if (!InternetWriteFile(req, data + bytesWritten, lemin(dataLength - bytesWritten, SHRT_MAX), &lastWrite)) goto rip;
 		bytesWritten += lastWrite;
 		cbProgress(bytesWritten, dataLength);
 	}
 
 	// writing end
 	if (!writeInternetExact(req, fdEnd, sizeof(fdEnd) - 1)) goto rip;
-	if (!HttpEndRequestA(req, NULL, 0, 0)) goto rip;
+	if (!HttpEndRequestA(req, nullptr, 0, 0)) goto rip;
 
 	while (true)
 	{
@@ -88,7 +90,7 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, con
 		if (bytesRead == 0) break;
 		recvBuf.append(tmp, bytesRead);
 	}
-	urlPos = recvBuf.find("\"url\": \"");
+	urlPos = recvBuf.find(R"("url": ")");
 	if (urlPos == std::string::npos) {
 		SetLastError(ERROR_INVALID_DATA);
 		*url = _strdup(recvBuf.c_str());
@@ -111,8 +113,8 @@ DWORD uploadWebhook(const char* webhook, const char* data, DWORD dataLength, con
 	SetLastError(0);
 rip:
 	DWORD status = GetLastError();
-	if (req != 0) InternetCloseHandle(req);
-	if (conn != 0) InternetCloseHandle(conn);
-	if (wininet != 0) InternetCloseHandle(wininet);
+	if (req != nullptr) InternetCloseHandle(req);
+	if (conn != nullptr) InternetCloseHandle(conn);
+	if (wininet != nullptr) InternetCloseHandle(wininet);
 	return status;
 }
