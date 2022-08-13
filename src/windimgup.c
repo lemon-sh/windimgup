@@ -240,7 +240,8 @@ void uploadFromClipboard(HWND parent) {
 		MessageBoxA(NULL, "Failed to allocate the in-memory stream", "Error", MB_ICONERROR); goto rip;
 	}
 
-	uploadThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) uploadHelper, param, 0, NULL);
+    // TODO: use _beginthreadex() here instead
+	uploadThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)uploadHelper, param, 0, NULL);
 	if (uploadThread == NULL) {
 		MessageBoxA(NULL, "Failed to create the thread", "Error", MB_ICONERROR);
 		goto rip;
@@ -267,7 +268,7 @@ void uploadFromFile(HWND parent) {
 		CloseHandle(uploadThread);
 		uploadThread = NULL;
 	}
-	
+
 	char filepath[512];
 	param = malloc(sizeof(uploadParam));
 	if (!param) goto rip;
@@ -302,14 +303,14 @@ void uploadFromFile(HWND parent) {
 		MessageBoxA(NULL, "Could not get file size", "Error", MB_ICONERROR);
 		goto rip;
 	}
-	buf = GlobalAlloc(0, filesize.QuadPart);
+	buf = GlobalAlloc(0, (size_t)filesize.QuadPart);
 	if (!ReadFile(file, buf, (DWORD)filesize.QuadPart, &bytesRead, NULL)) {
 		MessageBoxA(NULL, "Could not read the file", "Error", MB_ICONERROR);
 		goto rip;
 	}
 	CloseHandle(file);
 	file = 0;
-	if (bytesRead != filesize.QuadPart) { 
+	if (bytesRead != filesize.QuadPart) {
 		MessageBoxA(NULL, "Could not read the entire file", "Error", MB_ICONERROR);
 		goto rip;
 	}

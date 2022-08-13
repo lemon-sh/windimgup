@@ -59,7 +59,7 @@ DWORD loadSettings(char** buf) {
 	HANDLE file = CreateFileW(configPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE) goto rip;
 	if (!GetFileSizeEx(file, &filesize)) goto rip;
-	*buf = (char*)malloc(filesize.QuadPart);
+	*buf = (char*)malloc((size_t)filesize.QuadPart);
     if (!ReadFile(file, *buf, (DWORD)filesize.QuadPart, &bytesRead, NULL)) goto rip;
 	if (bytesRead != filesize.QuadPart) { SetLastError(ERROR_READ_FAULT); goto rip; }
 	(*buf)[filesize.QuadPart - 1] = 0;
