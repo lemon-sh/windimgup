@@ -1,3 +1,7 @@
+#pragma comment(linker,"\"/manifestdependency:type='win32' \
+name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
+processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
 #include <windows.h>
 #include <Commctrl.h>
 #include <stdio.h>
@@ -17,7 +21,7 @@ HBRUSH bgBrush, brightBrush;
 HANDLE uploadThread;
 
 // window size
-#define WIN_WIDTH 290
+#define WIN_WIDTH 300
 #define WIN_HEIGHT 215
 
 // colors
@@ -95,11 +99,11 @@ void createControls(HWND hWnd) {
 	outputEdit = createEdit(hWnd, CT_EDIT, 12, 100, 200, 22, ES_READONLY | ES_AUTOHSCROLL);
 	createButton(hWnd, CT_COPY, "Copy", 215, 100, 55, 22);
 
-	webhookEdit = createEdit(hWnd, CT_EDIT, 12, 135, 200, 22, ES_AUTOHSCROLL);
+	webhookEdit = createEdit(hWnd, CT_EDIT, 12, 125, 200, 22, ES_AUTOHSCROLL);
 	EnableWindow(webhookEdit, 0);
-	webhookButton = createButton(hWnd, CT_WEBHOOK, "Edit", 215, 135, 55, 22);
-	autocopyCheckbox = createCheckbox(hWnd, CT_CHECK, 12, 160, 15, 20);
-	createLabel(hWnd, CT_TEXT, "Automatically copy link to clipboard", uiFont, 30, 162, 200, 20);
+	webhookButton = createButton(hWnd, CT_WEBHOOK, "Edit", 215, 125, 55, 22);
+	autocopyCheckbox = createCheckbox(hWnd, CT_CHECK, 12, 150, 15, 20);
+	createLabel(hWnd, CT_TEXT, "Automatically copy link to clipboard", uiFont, 30, 152, 200, 20);
 	EnableWindow(autocopyCheckbox, 0);
 
 	SendMessageA(webhookEdit, EM_SETCUEBANNER, 1, (LPARAM)L"Webhook...");
@@ -427,7 +431,7 @@ int WINAPI WinMain(
 	WNDCLASSEXA wc = { 0 };
 	wc.cbSize = sizeof(wc);
 	wc.lpfnWndProc = WndProc;
-	wc.hIcon = LoadIconA(hInstance, MAKEINTRESOURCEA(2));
+	wc.hIcon = LoadIconA(hInstance, MAKEINTRESOURCEA(1));
 	wc.hInstance = hInstance;
 	wc.hbrBackground = bgBrush;
 	wc.lpszClassName = "WinDimgup";

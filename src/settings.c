@@ -50,6 +50,7 @@ rip:
 *  - [out] buf: The config file. Heap-allocated
 *  Returns 0 on success and GetLastError() value on failure.
 */
+// TODO: Make the API consistent with storeSettings()
 DWORD loadSettings(char** buf) {
 	LARGE_INTEGER filesize;
 	DWORD status, bytesRead;
