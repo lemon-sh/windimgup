@@ -29,7 +29,7 @@ DWORD storeSettings(BYTE opts, const char *webhook) {
     DWORD bytesWritten = 0, status;
     size_t webhookLength = strlen(webhook);
     DWORD bufSize = (DWORD) webhookLength + 2;
-    char *buf = (char *) malloc(bufSize);
+    BYTE *buf = malloc(bufSize);
     if (buf == NULL) return ERROR_NOT_ENOUGH_MEMORY;
     *buf = opts;
     memcpy(buf + 1, webhook, webhookLength + 1);
@@ -71,6 +71,10 @@ DWORD loadSettings(BYTE *opts, char **webhook) {
         goto rip;
     }
     *webhook = (char *) malloc((size_t) webhooklen);
+    if (!*webhook) {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        goto rip;
+    }
     if (!ReadFile(file, opts, 1, &bytesRead, NULL)) goto rip;
     if (bytesRead != 1) {
         SetLastError(ERROR_READ_FAULT);
