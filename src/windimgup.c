@@ -5,6 +5,7 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #include <windows.h>
 #include <Commctrl.h>
 #include <stdio.h>
+#include <process.h>
 
 #include "settings.h"
 #include "discord_webhook.h"
@@ -151,9 +152,9 @@ rip:
 *  Callback for the uploadWebhook function
 */
 void updateProgress(DWORD a, DWORD b) {
-	int percent = a*100 / b;
+	DWORD percent = a*100 / b;
 	char progressText[8];
-	snprintf(progressText, sizeof progressText, "%d%%", percent);
+	snprintf(progressText, sizeof progressText, "%lu%%", percent);
 	SendMessageA(progressBar, PBM_SETPOS, percent, 0);
 	SetWindowTextA(progressLabel, progressText);
 }
@@ -165,9 +166,9 @@ typedef struct {
 } uploadParam;
 
 /*
-*  Handles upload in a window context. Should be run in a thread.
+*  Handles upload in a window context. Should be run in a thread (hence stdcall).
 */
-DWORD uploadHelper(uploadParam *param) {
+DWORD __stdcall uploadHelper(uploadParam *param) {
 	char webhook[256];
 	char *webhook_start = webhook, *dataLocked = GlobalLock(param->data), *url = 0;
 	SIZE_T dataSize = GlobalSize(param->data);
@@ -240,8 +241,7 @@ void uploadFromClipboard(HWND parent) {
 		MessageBoxA(NULL, "Failed to allocate the in-memory stream", "Error", MB_ICONERROR); goto rip;
 	}
 
-    // TODO: use _beginthreadex() here instead
-	uploadThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)uploadHelper, param, 0, NULL);
+	uploadThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type) uploadHelper, param, 0, NULL);
 	if (uploadThread == NULL) {
 		MessageBoxA(NULL, "Failed to create the thread", "Error", MB_ICONERROR);
 		goto rip;
@@ -316,7 +316,7 @@ void uploadFromFile(HWND parent) {
 	}
 	param->data = buf;
 
-	uploadThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)uploadHelper, param, 0, NULL);
+	uploadThread = (HANDLE)_beginthreadex(NULL, 0, (_beginthreadex_proc_type)uploadHelper, param, 0, NULL);
 	if (uploadThread == NULL) {
 		MessageBoxA(NULL, "Failed to create the thread", "Error", MB_ICONERROR);
 		goto rip;
