@@ -47,26 +47,31 @@ rip:
 
 /*
 *  Loads settings from the config file.
-*  - [out] buf: The config file. Heap-allocated
+*  - [out] opts: Auxiliary data stored with the webhook
+*  - [out] webhook: Discord webhook (as passed to uploadWebhook)
 *  Returns 0 on success and GetLastError() value on failure.
 */
-// TODO: Make the API consistent with storeSettings()
-DWORD loadSettings(char** buf) {
+DWORD loadSettings(BYTE *opts, char** webhook) {
 	LARGE_INTEGER filesize;
 	DWORD status, bytesRead;
-	*buf = 0;
+	*webhook = 0;
 
 	HANDLE file = CreateFileW(configPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (file == INVALID_HANDLE_VALUE) goto rip;
 	if (!GetFileSizeEx(file, &filesize)) goto rip;
-	*buf = (char*)malloc((size_t)filesize.QuadPart);
-    if (!ReadFile(file, *buf, (DWORD)filesize.QuadPart, &bytesRead, NULL)) goto rip;
-	if (bytesRead != filesize.QuadPart) { SetLastError(ERROR_READ_FAULT); goto rip; }
-	(*buf)[filesize.QuadPart - 1] = 0;
+    LONGLONG webhooklen = filesize.QuadPart-1;
+
+    if (webhooklen < 1) { SetLastError(ERROR_INVALID_DATA); goto rip; }
+	*webhook = (char*)malloc((size_t)webhooklen);
+    if (!ReadFile(file, opts, 1, &bytesRead, NULL)) goto rip;
+    if (bytesRead != 1) { SetLastError(ERROR_READ_FAULT); goto rip; }
+    if (!ReadFile(file, *webhook, (DWORD)webhooklen, &bytesRead, NULL)) goto rip;
+	if (bytesRead != webhooklen) { SetLastError(ERROR_READ_FAULT); goto rip; }
+	(*webhook)[webhooklen - 1] = 0;
 	SetLastError(0);
 rip:
 	status = GetLastError();
 	if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
-	if (*buf && status) free(buf);
+	if (*webhook && status) free(webhook);
 	return status;
 }

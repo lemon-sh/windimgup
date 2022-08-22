@@ -348,18 +348,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 			MessageBoxA(hWnd, "Could not initialize config", "Error", MB_ICONERROR);
 			ExitProcess(1);
 		}
-		char *buf;
+		char *webhook;
+        BYTE opts;
 		DWORD errCode;
-		if ((errCode = loadSettings(&buf))) {
+		if ((errCode = loadSettings(&opts, &webhook))) {
 			if (errCode != ERROR_FILE_NOT_FOUND) {
 				errorMsgbox(errCode);
 			}
 			break;
 		}
 		else {
-			SendMessageA(autocopyCheckbox, BM_SETCHECK, (*buf) ? BST_CHECKED : BST_UNCHECKED, 0);
-			SetWindowTextA(webhookEdit, buf + 1);
+			SendMessageA(autocopyCheckbox, BM_SETCHECK, opts ? BST_CHECKED : BST_UNCHECKED, 0);
+			SetWindowTextA(webhookEdit, webhook);
 		}
+        free(webhook);
 		break;
 	}
 	case WM_CTLCOLORBTN:
